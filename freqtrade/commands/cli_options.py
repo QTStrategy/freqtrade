@@ -705,4 +705,9 @@ AVAILABLE_CLI_OPTIONS = {
         help="Use this csv-filename to store lookahead-analysis-results",
         type=str
     ),
+    "db_strategy": Arg(
+        '--db-strategy',
+        help="Read strategy from database",
+        type=str
+        ),
 }

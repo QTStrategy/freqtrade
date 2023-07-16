@@ -230,42 +230,45 @@ class StrategyResolver(IResolver):
         :param extra_dir: additional directory to search for the given strategy
         :return: Strategy instance or None
         """
-        if config.get('recursive_strategy_search', False):
-            extra_dirs: List[str] = [
-                path[0] for path in walk(f"{config['user_data_dir']}/{USERPATH_STRATEGIES}")
-            ]  # sub-directories
+        if len(config.get('db_strategy')) > 0:
+            strategy = StrategyResolver._load_object_from_db(config.get('db_strategy'), strategy_name, kwargs={'config': config})
         else:
-            extra_dirs = []
+            if config.get('recursive_strategy_search', False):
+                extra_dirs: List[str] = [
+                    path[0] for path in walk(f"{config['user_data_dir']}/{USERPATH_STRATEGIES}")
+                ]  # sub-directories
+            else:
+                extra_dirs = []
 
-        if extra_dir:
-            extra_dirs.append(extra_dir)
+            if extra_dir:
+                extra_dirs.append(extra_dir)
 
-        abs_paths = StrategyResolver.build_search_paths(config,
+            abs_paths = StrategyResolver.build_search_paths(config,
                                                         user_subdir=USERPATH_STRATEGIES,
                                                         extra_dirs=extra_dirs)
 
-        if ":" in strategy_name:
-            logger.info("loading base64 encoded strategy")
-            strat = strategy_name.split(":")
+            if ":" in strategy_name:
+                logger.info("loading base64 encoded strategy")
+                strat = strategy_name.split(":")
 
-            if len(strat) == 2:
-                temp = Path(tempfile.mkdtemp("freq", "strategy"))
-                name = strat[0] + ".py"
+                if len(strat) == 2:
+                    temp = Path(tempfile.mkdtemp("freq", "strategy"))
+                    name = strat[0] + ".py"
 
-                temp.joinpath(name).write_text(urlsafe_b64decode(strat[1]).decode('utf-8'))
-                temp.joinpath("__init__.py").touch()
+                    temp.joinpath(name).write_text(urlsafe_b64decode(strat[1]).decode('utf-8'))
+                    temp.joinpath("__init__.py").touch()
 
-                strategy_name = strat[0]
+                    strategy_name = strat[0]
 
-                # register temp path with the bot
-                abs_paths.insert(0, temp.resolve())
+                    # register temp path with the bot
+                    abs_paths.insert(0, temp.resolve())
 
-        strategy = StrategyResolver._load_object(
-            paths=abs_paths,
-            object_name=strategy_name,
-            add_source=True,
-            kwargs={'config': config},
-        )
+            strategy = StrategyResolver._load_object(
+                paths=abs_paths,
+                object_name=strategy_name,
+                add_source=True,
+                kwargs={'config': config},
+            )
 
         if strategy:
 
