@@ -63,3 +63,6 @@ janus==1.0.0
 
 ast-comments==1.1.0
 packaging==23.1
+
+pymysql==1.0.2
+sqlalchemy_utils==0.41.1

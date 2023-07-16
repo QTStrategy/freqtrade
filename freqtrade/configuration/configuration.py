@@ -78,6 +78,9 @@ class Configuration:
         if 'pairlists' not in config:
             config['pairlists'] = []
 
+        if 'db_strategy' not in config:
+            config['db_strategy'] = ""
+
         # Keep a copy of the original configuration file
         config['original_config'] = deepcopy(config)
 
@@ -145,6 +148,9 @@ class Configuration:
         # Set strategy if not specified in config and or if it's non default
         if self.args.get('strategy') or not config.get('strategy'):
             config.update({'strategy': self.args.get('strategy')})
+
+        if self.args.get('db_strategy'):
+            config.update({'db_strategy': self.args.get('db_strategy')})
 
         self._args_to_config(config, argname='strategy_path',
                              logstring='Using additional Strategy lookup path: {}')

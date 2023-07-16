@@ -13,6 +13,13 @@ from typing import Any, Dict, Iterator, List, Optional, Tuple, Type, Union
 from freqtrade.constants import Config
 from freqtrade.exceptions import OperationalException
 
+from sqlalchemy.exc import NoSuchModuleError
+
+import sqlalchemy
+from sqlalchemy.orm import scoped_session, sessionmaker
+from freqtrade.persistence.strategy_model import StrategyStr
+from freqtrade.persistence.base import ModelBase
+from sqlalchemy_utils import database_exists, create_database
 
 logger = logging.getLogger(__name__)
 
@@ -253,3 +260,28 @@ class IResolver:
                      'location_rel': cls._build_rel_location(basedir or directory, entry),
                      })
         return objects
+
+    @classmethod
+    def _load_object_from_db(cls, db_string: str, object_name: str, kwargs: dict = {}):
+        print(db_string)
+        try:
+            engine = sqlalchemy.create_engine(db_string)
+            if not database_exists(engine.url): create_database(engine.url)
+        except NoSuchModuleError:
+            raise OperationalException(f"Given value for db_url: '{db_url}' "
+                                       f"is no valid database URL! (See {_SQL_DOCS_URL})")
+        StrategyStr.session = scoped_session(sessionmaker(bind=engine))
+        ModelBase.metadata.create_all(engine)
+        obj = StrategyStr.get_strategy(object_name)
+        spec = importlib.util.spec_from_loader(object_name, loader=None)
+        module = importlib.util.module_from_spec(spec)
+        try:
+            exec(obj.code, module.__dict__)
+        except (AttributeError, ModuleNotFoundError, SyntaxError,
+                                    ImportError, NameError) as err:
+            logger.warning(f"Could not import {module_path} due to '{err}'")
+            return None
+        for name, obj in inspect.getmembers(module, inspect.isclass):
+             if name == object_name and issubclass(obj, cls.object_type) and obj is not cls.object_type:
+                 return obj(**kwargs)
+        return None

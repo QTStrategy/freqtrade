@@ -13,7 +13,7 @@ from freqtrade.constants import DEFAULT_CONFIG
 ARGS_COMMON = ["verbosity", "logfile", "version", "config", "datadir", "user_data_dir"]
 
 ARGS_STRATEGY = ["strategy", "strategy_path", "recursive_strategy_search", "freqaimodel",
-                 "freqaimodel_path"]
+                 "freqaimodel_path", "db_strategy"]
 
 ARGS_TRADE = ["db_url", "sd_notify", "dry_run", "dry_run_wallet", "fee"]
 
