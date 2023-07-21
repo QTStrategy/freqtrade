@@ -206,12 +206,29 @@ class IResolver:
         :param recursive: Recursively walk directory tree searching for strategies
         :return: List of dicts containing 'name', 'class' and 'location' entries
         """
+        if len(config.get('db_strategy')) > 0 and cls.object_type_str == "Strategy":
+            return cls._search_all_objects_db(config.get('db_strategy'), config)
         result = []
 
         abs_paths = cls.build_search_paths(config, user_subdir=cls.user_subdir)
         for path in abs_paths:
             result.extend(cls._search_all_objects(path, enum_failed, recursive))
         return result
+
+    @classmethod
+    def _search_all_objects_db(cls, db_string, config: Config) -> List[Dict[str, Any]]:
+        ret = []
+        cls._init_db(db_string)
+        strategies = StrategyStr.list_strategy()
+        objects: List[Dict[str, Any]] = []
+        for strategy in strategies:
+            ret.append(
+                    {'name': strategy.strategy,
+                     'class': strategy.strategy,
+                     'location': "db",
+                     'location_rel': StrategyStr.url,
+                     })
+        return ret
 
     @classmethod
     def _build_rel_location(cls, directory: Path, entry: Path) -> str:
@@ -262,16 +279,23 @@ class IResolver:
         return objects
 
     @classmethod
-    def _load_object_from_db(cls, db_string: str, object_name: str, kwargs: dict = {}):
-        print(db_string)
-        try:
-            engine = sqlalchemy.create_engine(db_string)
-            if not database_exists(engine.url): create_database(engine.url)
-        except NoSuchModuleError:
-            raise OperationalException(f"Given value for db_url: '{db_url}' "
+    def _init_db(cls, db_string:str):
+        if hasattr(StrategyStr, 'session'):
+            pass
+        else:
+            try:
+                engine = sqlalchemy.create_engine(db_string)
+                if not database_exists(engine.url): create_database(engine.url)
+            except NoSuchModuleError:
+                raise OperationalException(f"Given value for db_url: '{db_url}' "
                                        f"is no valid database URL! (See {_SQL_DOCS_URL})")
-        StrategyStr.session = scoped_session(sessionmaker(bind=engine))
-        ModelBase.metadata.create_all(engine)
+            StrategyStr.session = scoped_session(sessionmaker(bind=engine))
+            StrategyStr.url = engine.url
+            ModelBase.metadata.create_all(engine)
+
+    @classmethod
+    def _load_object_from_db(cls, db_string: str, object_name: str, kwargs: dict = {}):
+        cls._init_db(db_string)
         obj = StrategyStr.get_strategy(object_name)
         spec = importlib.util.spec_from_loader(object_name, loader=None)
         module = importlib.util.module_from_spec(spec)
@@ -279,9 +303,10 @@ class IResolver:
             exec(obj.code, module.__dict__)
         except (AttributeError, ModuleNotFoundError, SyntaxError,
                                     ImportError, NameError) as err:
-            logger.warning(f"Could not import {module_path} due to '{err}'")
+            logger.warning(f"Could not import due to '{err}'")
             return None
         for name, obj in inspect.getmembers(module, inspect.isclass):
              if name == object_name and issubclass(obj, cls.object_type) and obj is not cls.object_type:
+                 logger.info(f"load '{object_name}' strategty.")
                  return obj(**kwargs)
         return None
