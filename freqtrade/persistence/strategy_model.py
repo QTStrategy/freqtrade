@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 
 class StrategyStr(ModelBase):
     __tablename__ = 'strategy'
+    url = ''
     session: ClassVar[SessionType]
     __table_args__ = (UniqueConstraint('strategy', name="_strategy_uniq"),)
     strategy: Mapped[str] = mapped_column(String(255), nullable=False, primary_key=True)
@@ -17,3 +18,7 @@ class StrategyStr(ModelBase):
     @staticmethod
     def get_strategy(strategy_name: str):
         return StrategyStr.session.scalars(select(StrategyStr).filter(StrategyStr.strategy == strategy_name)).first()
+
+    @staticmethod
+    def list_strategy():
+        return StrategyStr.session.scalars(select(StrategyStr).filter()).all()
