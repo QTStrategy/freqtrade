@@ -28,12 +28,20 @@ def _check_data_config_download_sanity(config: Config) -> None:
             "Downloading data requires a list of pairs. "
             "Please check the documentation on how to configure this.")
 
-
 def start_download_data(args: Dict[str, Any]) -> None:
     """
     Download data (former download_backtest_data.py script)
     """
+    updateContent = None
+    if args.get('db_history'):
+        updateContent = args.get('db_history')
     config = setup_utils_configuration(args, RunMode.UTIL_EXCHANGE)
+    if updateContent != None:
+        config['dataformat_ohlcv'] = "mysql"
+        config['dataformat_trades'] = "mysql"
+        config['db_history'] = updateContent
+    else:
+        config['db_history'] = ""
 
     _check_data_config_download_sanity(config)
 

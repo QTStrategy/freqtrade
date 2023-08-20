@@ -28,8 +28,9 @@ class IDataHandler(ABC):
 
     _OHLCV_REGEX = r'^([a-zA-Z_\d-]+)\-(\d+[a-zA-Z]{1,2})\-?([a-zA-Z_]*)?(?=\.)'
 
-    def __init__(self, datadir: Path) -> None:
+    def __init__(self, datadir: Path, **Extra) -> None:
         self._datadir = datadir
+        self._extra = Extra
 
     @classmethod
     def _get_file_extension(cls) -> str:
@@ -414,12 +415,15 @@ def get_datahandlerclass(datatype: str) -> Type[IDataHandler]:
     elif datatype == 'parquet':
         from .parquetdatahandler import ParquetDataHandler
         return ParquetDataHandler
+    elif datatype == 'mysql':
+        from .mysqldatahandler import MysqlDataHandler
+        return MysqlDataHandler
     else:
         raise ValueError(f"No datahandler for datatype {datatype} available.")
 
 
 def get_datahandler(datadir: Path, data_format: Optional[str] = None,
-                    data_handler: Optional[IDataHandler] = None) -> IDataHandler:
+                    data_handler: Optional[IDataHandler] = None, **Extra) -> IDataHandler:
     """
     :param datadir: Folder to save data
     :param data_format: dataformat to use
@@ -428,5 +432,5 @@ def get_datahandler(datadir: Path, data_format: Optional[str] = None,
 
     if not data_handler:
         HandlerClass = get_datahandlerclass(data_format or 'json')
-        data_handler = HandlerClass(datadir)
+        data_handler = HandlerClass(datadir, **Extra)
     return data_handler

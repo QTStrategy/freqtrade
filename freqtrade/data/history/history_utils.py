@@ -217,7 +217,45 @@ def _download_pair_history(pair: str, *,
             if data_handler.ohlcv_purge(pair, timeframe, candle_type=candle_type):
                 logger.info(f'Deleting existing data for pair {pair}, {timeframe}, {candle_type}.')
 
-        data, since_ms, until_ms = _load_cached_data_for_updating(
+        if hasattr(data_handler, 'query_download_data') and callable(data_handler.query_download_data):
+                shallDownload,fs,fe,ss,se = data_handler.query_download_data(pair, timeframe, timerange, candle_type)
+                if not shallDownload:
+                    logger.info(f'({process}) no need to Download')
+                    return True
+                else:
+                    logger.info(f'({process}) - Download history data for "{pair}", {timeframe}, '
+                    f'{candle_type} and store in {datadir}. '
+                    f'From {format_ms_time(fs)} to '
+                    f'{format_ms_time(fe)}')
+                    if ss != None:
+                        logger.info(f'({process}) - Download history data for "{pair}", {timeframe}, '
+                        f'{candle_type} and store in {datadir}. '
+                        f'From {format_ms_time(ss)} to '
+                        f'{format_ms_time(se)}')
+
+                    data1 = exchange.get_historic_ohlcv(pair=pair,
+                                    timeframe=timeframe,
+                                    since_ms=fs,
+                                    is_new_pair=True,
+                                    candle_type=candle_type,
+                                    until_ms=fe)
+                    data1Frame = ohlcv_to_dataframe(data1, timeframe, pair,
+                                           fill_missing=False, drop_incomplete=True)
+                    data_handler.ohlcv_store(pair, timeframe, data=data1Frame, candle_type=candle_type)
+                    if ss != None:
+                        data2 = exchange.get_historic_ohlcv(pair=pair,
+                                    timeframe=timeframe,
+                                    since_ms=ss,
+                                    is_new_pair=True,
+                                    candle_type=candle_type,
+                                    until_ms=se)
+                        data2Frame = ohlcv_to_dataframe(data2, timeframe, pair,
+                                           fill_missing=False, drop_incomplete=True)
+                        data_handler.ohlcv_store(pair, timeframe, data=data2Frame, candle_type=candle_type)
+                    return True
+
+        else:
+            data, since_ms, until_ms = _load_cached_data_for_updating(
             pair, timeframe, timerange,
             data_handler=data_handler,
             candle_type=candle_type,
@@ -280,14 +318,14 @@ def refresh_backtest_ohlcv_data(exchange: Exchange, pairs: List[str], timeframes
                                 new_pairs_days: int = 30, erase: bool = False,
                                 data_format: Optional[str] = None,
                                 prepend: bool = False,
-                                ) -> List[str]:
+                                db_history: str = "",) -> List[str]:
     """
     Refresh stored ohlcv data for backtesting and hyperopt operations.
     Used by freqtrade download-data subcommand.
     :return: List of pairs that are not available.
     """
     pairs_not_available = []
-    data_handler = get_datahandler(datadir, data_format)
+    data_handler = get_datahandler(datadir, data_format, db_history=db_history)
     candle_type = CandleType.get_default(trading_mode)
     process = ''
     for idx, pair in enumerate(pairs, start=1):
@@ -556,7 +594,8 @@ def download_data_main(config: Config) -> None:
                 new_pairs_days=config['new_pairs_days'],
                 erase=bool(config.get('erase')), data_format=config['dataformat_ohlcv'],
                 trading_mode=config.get('trading_mode', 'spot'),
-                prepend=config.get('prepend_data', False)
+                prepend=config.get('prepend_data', False),
+                db_history =config['db_history']
             )
     finally:
         if pairs_not_available:

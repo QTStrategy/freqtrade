@@ -710,4 +710,9 @@ AVAILABLE_CLI_OPTIONS = {
         help="Read strategy from database",
         type=str
         ),
+    "db_history": Arg(
+        '--db-history',
+        help="Read history from database",
+        type=str
+        ),
 }
