@@ -297,10 +297,11 @@ class IResolver:
     def _load_object_from_db(cls, db_string: str, object_name: str, kwargs: dict = {}):
         cls._init_db(db_string)
         obj = StrategyStr.get_strategy(object_name)
+        code = obj.code
         spec = importlib.util.spec_from_loader(object_name, loader=None)
         module = importlib.util.module_from_spec(spec)
         try:
-            exec(obj.code, module.__dict__)
+            exec(code, module.__dict__)
         except (AttributeError, ModuleNotFoundError, SyntaxError,
                                     ImportError, NameError) as err:
             logger.warning(f"Could not import due to '{err}'")
@@ -308,5 +309,7 @@ class IResolver:
         for name, obj in inspect.getmembers(module, inspect.isclass):
              if name == object_name and issubclass(obj, cls.object_type) and obj is not cls.object_type:
                  logger.info(f"load '{object_name}' strategty.")
+                 if 'config' in kwargs:
+                     kwargs['config']['code'] = code
                  return obj(**kwargs)
         return None

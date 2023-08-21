@@ -1246,7 +1246,8 @@ class RPC:
             timeframe=timeframe,
             timerange=timerange_parsed,
             data_format=config.get('dataformat_ohlcv', 'json'),
-            candle_type=config.get('candle_type_def', CandleType.SPOT)
+            candle_type=config.get('candle_type_def', CandleType.SPOT),
+            db_history=config['db_history']
         )
         if pair not in _data:
             raise RPCException(

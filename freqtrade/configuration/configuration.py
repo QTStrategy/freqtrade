@@ -81,6 +81,8 @@ class Configuration:
         if 'db_strategy' not in config:
             config['db_strategy'] = ""
 
+        if 'db_history' not in config:
+            config['db_strategy'] = ""
         # Keep a copy of the original configuration file
         config['original_config'] = deepcopy(config)
 

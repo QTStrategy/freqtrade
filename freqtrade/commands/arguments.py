@@ -17,7 +17,7 @@ ARGS_STRATEGY = ["strategy", "strategy_path", "recursive_strategy_search", "freq
 
 ARGS_TRADE = ["db_url", "sd_notify", "dry_run", "dry_run_wallet", "fee"]
 
-ARGS_WEBSERVER = ["db_strategy"]
+ARGS_WEBSERVER = ["db_strategy", "db_history"]
 
 ARGS_COMMON_OPTIMIZE = ["timeframe", "timerange", "dataformat_ohlcv",
                         "max_open_trades", "stake_amount", "fee", "pairs"]
@@ -26,7 +26,7 @@ ARGS_BACKTEST = ARGS_COMMON_OPTIMIZE + ["position_stacking", "use_max_market_pos
                                         "enable_protections", "dry_run_wallet", "timeframe_detail",
                                         "strategy_list", "export", "exportfilename",
                                         "backtest_breakdown", "backtest_cache",
-                                        "freqai_backtest_live_models"]
+                                        "freqai_backtest_live_models", "db_history"]
 
 ARGS_HYPEROPT = ARGS_COMMON_OPTIMIZE + ["hyperopt", "hyperopt_path",
                                         "position_stacking", "use_max_market_positions",

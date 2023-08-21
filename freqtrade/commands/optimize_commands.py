@@ -48,8 +48,17 @@ def start_backtesting(args: Dict[str, Any]) -> None:
     # Import here to avoid loading backtesting module when it's not used
     from freqtrade.optimize.backtesting import Backtesting
 
+    updateContent = None
+    if args.get('db_history'):
+        updateContent = args.get('db_history')
     # Initialize configuration
     config = setup_optimize_configuration(args, RunMode.BACKTEST)
+    if updateContent != None:
+        config['dataformat_ohlcv'] = "mysql"
+        config['dataformat_trades'] = "mysql"
+        config['db_history'] = updateContent
+    else:
+        config['db_history'] = ""
 
     logger.info('Starting freqtrade in Backtesting mode')
 

@@ -31,7 +31,7 @@ def OhlcvClassCreate(table:str, frame: Frame):
     uniq_name = f'_{tableName}_uniq'
     class DynamicModel(ModelBase):
         __tablename__ = tableName
-        __table_args__ = (UniqueConstraint('date', name=uniq_name),)
+        __table_args__ = (UniqueConstraint('date', name=uniq_name), {'extend_existing': True},)
         session: ClassVar[SessionType]
         date: Mapped[int] = mapped_column(BigInteger(), primary_key=True, autoincrement=False, nullable=False)
         open: Mapped[float] = mapped_column(Float(), nullable=False)

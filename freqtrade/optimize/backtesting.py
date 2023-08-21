@@ -225,6 +225,16 @@ class Backtesting:
                 conf['protections'] = strategy.protections
             self.protections = ProtectionManager(self.config, strategy.protections)
 
+    def shall_download(self):
+        history.download_before_backtesting(datadir=self.config['datadir'],
+                                    timeframe=self.timeframe,
+                                    timerange=self.timerange,
+                                    data_format=self.config['dataformat_ohlcv'],
+                                    exchange= self.exchange,
+                                    pairs=self.pairlists.whitelist, 
+                                    candle_type=self.config.get('candle_type_def', CandleType.SPOT),
+                                    db_history=self.config['db_history'])
+
     def load_bt_data(self) -> Tuple[Dict[str, DataFrame], TimeRange]:
         """
         Loads backtest data and returns the data combined with the timerange
@@ -240,7 +250,8 @@ class Backtesting:
             startup_candles=self.config['startup_candle_count'],
             fail_without_data=True,
             data_format=self.config.get('dataformat_ohlcv', 'json'),
-            candle_type=self.config.get('candle_type_def', CandleType.SPOT)
+            candle_type=self.config.get('candle_type_def', CandleType.SPOT),
+            db_history=self.config['db_history']
         )
 
         min_date, max_date = history.get_timerange(data)
@@ -269,7 +280,8 @@ class Backtesting:
                 startup_candles=0,
                 fail_without_data=True,
                 data_format=self.config.get('dataformat_ohlcv', 'json'),
-                candle_type=self.config.get('candle_type_def', CandleType.SPOT)
+                candle_type=self.config.get('candle_type_def', CandleType.SPOT,
+                db_history=self.config['db_history'])
             )
         else:
             self.detail_data = {}
@@ -1343,6 +1355,7 @@ class Backtesting:
         """
         data: Dict[str, Any] = {}
 
+        self.shall_download()
         data, timerange = self.load_bt_data()
         self.load_bt_data_detail()
         logger.info("Dataload complete. Calculating indicators")

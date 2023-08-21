@@ -72,7 +72,7 @@ def load_data(datadir: Path,
               data_format: str = 'json',
               candle_type: CandleType = CandleType.SPOT,
               user_futures_funding_rate: Optional[int] = None,
-              ) -> Dict[str, DataFrame]:
+              db_history="") -> Dict[str, DataFrame]:
     """
     Load ohlcv history data for a list of pairs.
 
@@ -91,7 +91,7 @@ def load_data(datadir: Path,
     if startup_candles > 0 and timerange:
         logger.info(f'Using indicator startup period: {startup_candles} ...')
 
-    data_handler = get_datahandler(datadir, data_format)
+    data_handler = get_datahandler(datadir, data_format, db_history=db_history)
 
     for pair in pairs:
         hist = load_pair_history(pair=pair, timeframe=timeframe,
@@ -184,6 +184,50 @@ def _load_cached_data_for_updating(
     end_ms = int(end.timestamp() * 1000) if end else None
     return data, start_ms, end_ms
 
+def download_before_backtesting(datadir: Path, timeframe: str, pairs: List[str], timerange, data_format: str, exchange, candle_type: CandleType = CandleType.SPOT, db_history=''):
+    data_handler = get_datahandler(datadir, data_format, db_history=db_history)
+    if hasattr(data_handler, 'query_download_data') and callable(data_handler.query_download_data):
+        for pair in pairs:
+            _download_mysql_data(data_handler, "backtesting", exchange, pair, timeframe, timerange, candle_type)
+    else:
+        return None
+
+def _download_mysql_data(data_handler, process, exchange, pair, timeframe, timerange, candle_type):
+    shallDownload,fs,fe,ss,se = data_handler.query_download_data(pair, timeframe, timerange, candle_type)
+    if not shallDownload:
+        logger.info(f'({process}) no need to Download')
+        return True
+    else:
+        logger.info(f'({process}) - Download history data for "{pair}", {timeframe}, '
+        f'{candle_type} and store in mysql. '
+        f'From {format_ms_time(fs)} to '
+        f'{format_ms_time(fe)}')
+        if ss != None:
+            logger.info(f'({process}) - Download history data for "{pair}", {timeframe}, '
+            f'{candle_type} and store in mysql. '
+            f'From {format_ms_time(ss)} to '
+            f'{format_ms_time(se)}')
+
+        data1 = exchange.get_historic_ohlcv(pair=pair,
+                        timeframe=timeframe,
+                        since_ms=fs,
+                        is_new_pair=True,
+                        candle_type=candle_type,
+                        until_ms=fe)
+        data1Frame = ohlcv_to_dataframe(data1, timeframe, pair,
+                                fill_missing=False, drop_incomplete=True)
+        data_handler.ohlcv_store(pair, timeframe, data=data1Frame, candle_type=candle_type)
+        if ss != None:
+            data2 = exchange.get_historic_ohlcv(pair=pair,
+                        timeframe=timeframe,
+                        since_ms=ss,
+                        is_new_pair=True,
+                        candle_type=candle_type,
+                        until_ms=se)
+            data2Frame = ohlcv_to_dataframe(data2, timeframe, pair,
+                               fill_missing=False, drop_incomplete=True)
+            data_handler.ohlcv_store(pair, timeframe, data=data2Frame, candle_type=candle_type)
+        return True
 
 def _download_pair_history(pair: str, *,
                            datadir: Path,
@@ -218,42 +262,7 @@ def _download_pair_history(pair: str, *,
                 logger.info(f'Deleting existing data for pair {pair}, {timeframe}, {candle_type}.')
 
         if hasattr(data_handler, 'query_download_data') and callable(data_handler.query_download_data):
-                shallDownload,fs,fe,ss,se = data_handler.query_download_data(pair, timeframe, timerange, candle_type)
-                if not shallDownload:
-                    logger.info(f'({process}) no need to Download')
-                    return True
-                else:
-                    logger.info(f'({process}) - Download history data for "{pair}", {timeframe}, '
-                    f'{candle_type} and store in {datadir}. '
-                    f'From {format_ms_time(fs)} to '
-                    f'{format_ms_time(fe)}')
-                    if ss != None:
-                        logger.info(f'({process}) - Download history data for "{pair}", {timeframe}, '
-                        f'{candle_type} and store in {datadir}. '
-                        f'From {format_ms_time(ss)} to '
-                        f'{format_ms_time(se)}')
-
-                    data1 = exchange.get_historic_ohlcv(pair=pair,
-                                    timeframe=timeframe,
-                                    since_ms=fs,
-                                    is_new_pair=True,
-                                    candle_type=candle_type,
-                                    until_ms=fe)
-                    data1Frame = ohlcv_to_dataframe(data1, timeframe, pair,
-                                           fill_missing=False, drop_incomplete=True)
-                    data_handler.ohlcv_store(pair, timeframe, data=data1Frame, candle_type=candle_type)
-                    if ss != None:
-                        data2 = exchange.get_historic_ohlcv(pair=pair,
-                                    timeframe=timeframe,
-                                    since_ms=ss,
-                                    is_new_pair=True,
-                                    candle_type=candle_type,
-                                    until_ms=se)
-                        data2Frame = ohlcv_to_dataframe(data2, timeframe, pair,
-                                           fill_missing=False, drop_incomplete=True)
-                        data_handler.ohlcv_store(pair, timeframe, data=data2Frame, candle_type=candle_type)
-                    return True
-
+                return _download_mysql_data(data_handler, process, exchange, pair, timeframe, timerange, candle_type)
         else:
             data, since_ms, until_ms = _load_cached_data_for_updating(
             pair, timeframe, timerange,

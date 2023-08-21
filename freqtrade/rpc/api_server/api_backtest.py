@@ -56,6 +56,7 @@ def __run_backtest_bg(btconfig: Config):
             or lastconfig.get('timeframe') != strat.timeframe
             or lastconfig.get('timerange') != btconfig['timerange']
         ):
+            ApiBG.bt['bt'].shall_download()
             ApiBG.bt['data'], ApiBG.bt['timerange'] = ApiBG.bt[
                 'bt'].load_bt_data()
 

@@ -76,10 +76,10 @@ class MysqlDataHandler(IDataHandler):
             OhlcvConnect(self.Classes[genName], self._extra['db_history'])
 
         dClass = self.Classes[genName]
-        if timerange == None:
+        if timerange is None:
             DownloadData = dClass.load()
         else:
-            DownloadData = dClass.lookup_ohlcv(timerange.startts, timerange.stopts)
+            DownloadData = dClass.lookup_ohlcv(timerange.startts * 1000, timerange.stopts * 1000)
 
         if DownloadData == None or len(DownloadData) == 0:
             return DataFrame(columns=self._columns)
@@ -157,7 +157,7 @@ class MysqlDataHandler(IDataHandler):
 
         dClass = self.Classes[genName]        
         dateList = sorted(dClass.load(['date']))
-        if dateList == None or len(dateList) < 2:
+        if dateList is None or len(dateList) < 2:
             return (True, start, end, None, None)
 
         s = dateList[0]
