@@ -17,6 +17,7 @@ from freqtrade.persistence.key_value_store import _KeyValueStoreModel
 from freqtrade.persistence.migrations import check_migrate
 from freqtrade.persistence.pairlock import PairLock
 from freqtrade.persistence.trade_model import Order, Trade
+from sqlalchemy_utils import database_exists, create_database
 
 
 logger = logging.getLogger(__name__)
@@ -66,6 +67,7 @@ def init_db(db_url: str) -> None:
 
     try:
         engine = create_engine(db_url, future=True, **kwargs)
+        if not database_exists(engine.url): create_database(engine.url)
     except NoSuchModuleError:
         raise OperationalException(f"Given value for db_url: '{db_url}' "
                                    f"is no valid database URL! (See {_SQL_DOCS_URL})")
